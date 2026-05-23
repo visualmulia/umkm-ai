@@ -7,6 +7,8 @@ const NAV_LINKS = [
   { label: 'FAQ', href: '#faq' },
 ];
 
+const WA_LINK = 'https://wa.me/6285643419774?text=Halo%20UMKM-AI!%20%F0%9F%91%8B%20Saya%20mau%20coba%20pegawai%20digital%20untuk%20bisnis%20saya.';
+
 export default function Navigation() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -69,7 +71,7 @@ export default function Navigation() {
           </a>
 
           {/* Desktop Links */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 32 }} className="hidden md:flex">
+          <div className="hidden md:flex items-center" style={{ gap: 32 }}>
             {NAV_LINKS.map((link) => (
               <a
                 key={link.href}
@@ -98,7 +100,7 @@ export default function Navigation() {
 
           {/* Desktop CTA */}
           <a
-            href="https://wa.me/6285643419774"
+            href={WA_LINK}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-primary hidden md:inline-flex"
@@ -165,7 +167,7 @@ export default function Navigation() {
             </a>
           ))}
           <a
-            href="https://wa.me/6285643419774"
+            href={WA_LINK}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-primary btn-primary-lg"

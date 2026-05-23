@@ -118,7 +118,7 @@ export default function Hero() {
 
             <div className="hero-cta mb-7">
               <a
-                href="https://wa.me/6285643419774"
+                href="https://wa.me/6285643419774?text=Halo%20UMKM-AI!%20%F0%9F%91%8B%20Saya%20mau%20coba%20pegawai%20digital%20untuk%20bisnis%20saya."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-primary btn-primary-lg"

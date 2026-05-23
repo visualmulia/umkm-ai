@@ -99,7 +99,9 @@ export const webhookRouter = createRouter({
           where: eq(chats.customerPhone, customerPhone),
         });
 
-        if (!chat) {
+        const isNewChat = !chat;
+
+        if (isNewChat) {
           const [newChat] = await db
             .insert(chats)
             .values({
@@ -208,11 +210,25 @@ export const webhookRouter = createRouter({
             .map((p) => `- ${p.name}: Rp ${p.price}${p.stock ? ` (Stok: ${p.stock})` : ""}${p.description ? ` - ${p.description}` : ""}`)
             .join("\n");
 
-          const systemPrompt = `Kamu adalah ${device.name || "AI Customer Service"} untuk ${user?.businessName || "bisnis ini"}. 
+          let systemPrompt = `Kamu adalah ${device.name || "AI Customer Service"} untuk ${user?.businessName || "bisnis ini"}. 
 Bicara dengan tone yang ${device.tone || "ramah"}. 
 Jawab pertanyaan customer dengan singkat dan helpful.
 ${knowledgeText ? `\nKnowledge base:\n${knowledgeText}` : ""}
 ${productsText ? `\nDaftar produk:\n${productsText}` : ""}`;
+
+          // First-time onboarding: add special instructions for new customers
+          if (isNewChat) {
+            systemPrompt += `\n\n🎯 INI ADALAH CHAT PERTAMA CUSTOMER DENGAN AI.
+Sapa customer dengan ramah dan hangat. Perkenalkan diri sebagai ${device.name || "AI Customer Service"}.
+Tanyakan 3 hal ini satu per satu dengan santai:
+1. Nama bisnis/toko-nya apa?
+2. Jualan kategori apa? (fashion, makanan, dll)
+3. Ada berapa orang tim-nya?
+
+Setelah itu, minta customer kirim minimal 3 produk (foto + nama + harga) supaya AI bisa belajar.
+Beritahu juga bahwa mereka dapat 50 chat GRATIS untuk coba dulu.
+Akhiri dengan semangat dan emoji!`;
+          }
 
           // Call Kimi AI
           const apiKey = process.env.KIMI_API_KEY;
