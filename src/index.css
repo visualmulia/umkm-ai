@@ -1,0 +1,189 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 33% 97%;
+    --foreground: 0 0% 10%;
+    --card: 37 27% 92%;
+    --card-foreground: 0 0% 10%;
+    --popover: 40 33% 97%;
+    --popover-foreground: 0 0% 10%;
+    --primary: 18 60% 55%;
+    --primary-foreground: 40 33% 97%;
+    --secondary: 37 27% 92%;
+    --secondary-foreground: 0 0% 10%;
+    --muted: 37 27% 92%;
+    --muted-foreground: 0 0% 36%;
+    --accent: 40 50% 58%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 37 20% 85%;
+    --input: 37 20% 85%;
+    --ring: 18 60% 55%;
+    --radius: 1.25rem;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: #faf8f4;
+    color: #1a1a1a;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', sans-serif;
+    letter-spacing: -0.02em;
+    word-break: keep-all;
+  }
+}
+
+@layer components {
+  .font-display {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .font-body {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .text-eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #d4754a;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #d4754a;
+    color: #faf8f4;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 12px 28px;
+    border-radius: 50px;
+    border: none;
+    cursor: pointer;
+    transition: all 300ms ease;
+    text-decoration: none;
+  }
+
+  .btn-primary:hover {
+    background-color: #c06540;
+    transform: scale(1.02);
+  }
+
+  .btn-primary-lg {
+    padding: 16px 36px;
+    font-size: 15px;
+  }
+
+  .btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    color: #d4754a;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 14px 32px;
+    border-radius: 50px;
+    border: 1px solid #d4754a;
+    cursor: pointer;
+    transition: all 300ms ease;
+    text-decoration: none;
+  }
+
+  .btn-outline:hover {
+    background-color: #d4754a;
+    color: #faf8f4;
+  }
+
+  .section-padding {
+    padding-top: 140px;
+    padding-bottom: 140px;
+  }
+
+  .content-max-width {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+
+  @media (max-width: 768px) {
+    .section-padding {
+      padding-top: 80px;
+      padding-bottom: 80px;
+    }
+
+    .content-max-width {
+      padding-left: 20px;
+      padding-right: 20px;
+    }
+  }
+}
+
+@layer utilities {
+  @keyframes characterFloat {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-8px) rotate(1deg); }
+  }
+
+  @keyframes shadowPulse {
+    0%, 100% { transform: scale(1); opacity: 0.15; }
+    50% { transform: scale(0.85); opacity: 0.08; }
+  }
+
+  @keyframes breathing {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+  }
+
+  @keyframes floatCircle {
+    0%, 100% { transform: translate(0, 0); opacity: 0.4; }
+    25% { transform: translate(10px, -15px); opacity: 0.6; }
+    50% { transform: translate(-5px, -25px); opacity: 0.3; }
+    75% { transform: translate(-15px, -10px); opacity: 0.5; }
+  }
+
+  .animate-float {
+    animation: characterFloat 4s ease-in-out infinite;
+  }
+
+  .animate-shadow-pulse {
+    animation: shadowPulse 4s ease-in-out infinite;
+  }
+
+  .animate-breathing {
+    animation: breathing 3s ease-in-out infinite;
+  }
+
+  .animate-float-circle {
+    animation: floatCircle 15s ease-in-out infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
