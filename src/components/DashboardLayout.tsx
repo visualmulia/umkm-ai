@@ -7,6 +7,8 @@ import {
   BarChart3,
   Package,
   Brain,
+  Megaphone,
+  ClipboardList,
   Settings,
   LogOut,
   ChevronLeft,
@@ -21,6 +23,8 @@ const NAV_ITEMS = [
   { icon: BarChart3, label: 'Analisis', path: '/dashboard/analytics' },
   { icon: Package, label: 'Produk', path: '/dashboard/products' },
   { icon: Brain, label: 'AI Training', path: '/dashboard/ai-training' },
+  { icon: Megaphone, label: 'Marketing', path: '/dashboard/marketing' },
+  { icon: ClipboardList, label: 'Admin', path: '/dashboard/admin' },
   { icon: Settings, label: 'Pengaturan', path: '/dashboard/settings' },
 ]
 

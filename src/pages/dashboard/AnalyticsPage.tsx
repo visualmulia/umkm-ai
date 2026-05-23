@@ -6,6 +6,8 @@ import {
   ShoppingCart,
   MessageCircle,
   DollarSign,
+  Sparkles,
+  Loader2,
 } from 'lucide-react'
 
 function StatBox({ icon: Icon, label, value, change, changeType }: {
@@ -33,6 +35,7 @@ function StatBox({ icon: Icon, label, value, change, changeType }: {
 export default function AnalyticsPage() {
   const { data: analytics } = trpc.analytics.dashboard.useQuery();
   const { data: orderStats } = trpc.order.stats.useQuery();
+  const { data: aiInsights, isLoading: insightsLoading } = trpc.analytics.aiInsights.useQuery();
 
   // Weekly chart data
   const dailyData = analytics?.dailyChats || {};
@@ -131,6 +134,29 @@ export default function AnalyticsPage() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* AI Insights */}
+      <div className="mt-6 card">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(212,117,74,0.1)' }}>
+            <Sparkles className="w-4.5 h-4.5" style={{ color: '#d4754a' }} />
+          </div>
+          <div>
+            <h2 className="font-semibold text-sm" style={{ color: '#1a1a1a' }}>Insight dari Pak AI</h2>
+            <p className="text-xs" style={{ color: '#5c5c5c' }}>Analisis AI berdasarkan data bisnismu</p>
+          </div>
+        </div>
+        {insightsLoading ? (
+          <div className="flex items-center gap-2 py-4">
+            <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#d4754a' }} />
+            <span className="text-sm" style={{ color: '#5c5c5c' }}>Pak AI sedang menganalisis data...</span>
+          </div>
+        ) : (
+          <div className="p-4 rounded-xl text-sm whitespace-pre-wrap" style={{ backgroundColor: '#f0ece3', color: '#1a1a1a' }}>
+            {aiInsights?.insights || 'Belum ada cukup data untuk analisis. Ayo mulai jualan! 🚀'}
+          </div>
+        )}
       </div>
     </div>
   );

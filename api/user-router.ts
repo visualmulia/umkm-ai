@@ -42,7 +42,13 @@ export const userRouter = createRouter({
     .input(z.object({ plan: z.enum(["free", "starter", "pro"]) }))
     .mutation(async ({ ctx, input }) => {
       const db = getDb();
-      await db.update(users).set({ plan: input.plan }).where(eq(users.id, ctx.user.id));
+      const updates: Partial<typeof users.$inferInsert> = { plan: input.plan };
+      if (input.plan !== "free") {
+        updates.planExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      } else {
+        updates.planExpiresAt = null;
+      }
+      await db.update(users).set(updates).where(eq(users.id, ctx.user.id));
       return { success: true };
     }),
 
@@ -59,6 +65,7 @@ export const userRouter = createRouter({
     if (!user) return null;
     return {
       plan: user.plan,
+      planExpiresAt: user.planExpiresAt,
       deviceCount: user.devices.length,
       productCount: user.products.length,
       chatCount: user.chats.length,

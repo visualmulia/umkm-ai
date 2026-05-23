@@ -1,7 +1,8 @@
 import { eq, and, gte } from "drizzle-orm";
 import { createRouter, authedQuery } from "./middleware";
 import { getDb } from "./queries/connection";
-import { chats, orders, usageLogs } from "@db/schema";
+import { chats, orders, products } from "@db/schema";
+import { callAI } from "./lib/ai-provider";
 
 export const analyticsRouter = createRouter({
   dashboard: authedQuery.query(async ({ ctx }) => {
@@ -93,5 +94,71 @@ export const analyticsRouter = createRouter({
       topProducts,
       monthlyGrowth,
     };
+  }),
+
+  aiInsights: authedQuery.query(async ({ ctx }) => {
+    const db = getDb();
+    const userId = ctx.user.id;
+
+    const allOrders = await db.query.orders.findMany({
+      where: eq(orders.userId, userId),
+    });
+    const allProducts = await db.query.products.findMany({
+      where: eq(products.userId, userId),
+    });
+    const allChats = await db.query.chats.findMany({
+      where: eq(chats.userId, userId),
+    });
+
+    const totalRevenue = allOrders.reduce((sum, o) => sum + Number(o.totalAmount), 0);
+    const avgOrderValue = allOrders.length > 0 ? Math.round(totalRevenue / allOrders.length) : 0;
+    const aiHandleRate = allChats.length > 0
+      ? Math.round((allChats.filter((c) => c.status === "ai_handled").length / allChats.length) * 100)
+      : 0;
+
+    const lowStockProducts = allProducts.filter((p) => p.stock !== null && p.stock <= 5 && p.isActive);
+    const productSales: Record<string, number> = {};
+    allOrders.forEach((order) => {
+      let items: Array<{ name: string; quantity: number }> = [];
+      try {
+        items = JSON.parse(order.items || "[]");
+      } catch { /* ignore */ }
+      items.forEach((item) => {
+        productSales[item.name] = (productSales[item.name] || 0) + item.quantity;
+      });
+    });
+    const bestSeller = Object.entries(productSales).sort((a, b) => b[1] - a[1])[0];
+
+    const promptData = {
+      totalOrders: allOrders.length,
+      totalRevenue,
+      avgOrderValue,
+      totalChats: allChats.length,
+      aiHandleRate,
+      productCount: allProducts.length,
+      lowStockCount: lowStockProducts.length,
+      bestSeller: bestSeller ? bestSeller[0] : null,
+      bestSellerQty: bestSeller ? bestSeller[1] : 0,
+    };
+
+    try {
+      const systemPrompt = `Kamu adalah Pak AI — Business Analyst untuk UMKM Indonesia.
+Tugas: Analisis data bisnis dan berikan insight singkat (maksimal 3 poin) + 3 rekomendasi actionable dalam Bahasa Indonesia yang santai dan mudah dipahami UMKM owner.
+Format: gunakan bullet point dengan emoji.`;
+
+      const userPrompt = `Data bisnis 30 hari terakhir:
+${JSON.stringify(promptData, null, 2)}
+
+Berikan insight dan rekomendasi.`;
+
+      const aiResult = await callAI(systemPrompt, userPrompt);
+      return { insights: aiResult.content, generatedAt: new Date() };
+    } catch (err) {
+      console.error("AI Insights error:", err);
+      return {
+        insights: "📊 Data bisnis sedang diproses. Coba refresh dalam beberapa saat ya!",
+        generatedAt: new Date(),
+      };
+    }
   }),
 });

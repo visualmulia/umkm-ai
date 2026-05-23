@@ -18,6 +18,8 @@ export const users = sqliteTable("users", {
   businessCategory: text("businessCategory"),
   city: text("city"),
   plan: text("plan", { enum: ["free", "starter", "pro"] }).default("free").notNull(),
+  planExpiresAt: integer("planExpiresAt", { mode: "timestamp" }),
+  extraCredits: integer("extraCredits", { mode: "number" }).default(0).notNull(),
   onboardingStep: integer("onboardingStep", { mode: "number" }).default(0).notNull(),
   currentDeviceId: integer("currentDeviceId", { mode: "number" }),
   isActive: integer("isActive", { mode: "boolean" }).default(true).notNull(),
@@ -111,6 +113,7 @@ export const orders = sqliteTable("orders", {
     enum: ["pending", "paid", "processing", "shipped", "completed", "cancelled"],
   }).default("pending").notNull(),
   paymentLink: text("paymentLink"),
+  invoiceNumber: text("invoiceNumber"),
   createdAt: integer("createdAt", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
   updatedAt: integer("updatedAt", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
 });

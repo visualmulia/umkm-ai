@@ -22,7 +22,7 @@ export default function Login() {
     if (cleaned.startsWith('0')) cleaned = '62' + cleaned.slice(1)
     if (!cleaned.startsWith('62')) cleaned = '62' + cleaned
     return cleaned
-n  }
+  }
 
   const handleSendOtp = async () => {
     if (!phone || phone.length < 8) { setError('Masukkan nomor WA yang valid'); return }

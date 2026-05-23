@@ -12,6 +12,26 @@ export type TrpcContext = {
   sessionToken?: string;
 };
 
+async function resolveUserWithExpiryCheck(
+  user: User | undefined,
+): Promise<User | undefined> {
+  if (!user) return undefined;
+  if (user.plan === "free") return user;
+
+  const now = new Date();
+  if (user.planExpiresAt && user.planExpiresAt < now) {
+    // Plan expired — auto-downgrade to free
+    const db = getDb();
+    await db
+      .update(users)
+      .set({ plan: "free", planExpiresAt: null })
+      .where(eq(users.id, user.id));
+    return { ...user, plan: "free", planExpiresAt: null };
+  }
+
+  return user;
+}
+
 export async function createContext(
   opts: FetchCreateContextFnOptions,
 ): Promise<TrpcContext> {
@@ -30,7 +50,7 @@ export async function createContext(
         const user = await db.query.users.findFirst({
           where: eq(users.id, session.userId),
         });
-        if (user) ctx.user = user;
+        if (user) ctx.user = await resolveUserWithExpiryCheck(user);
       }
     } catch {
       // ignore
@@ -40,7 +60,8 @@ export async function createContext(
   // Fallback to OAuth
   if (!ctx.user) {
     try {
-      ctx.user = await authenticateRequest(opts.req.headers);
+      const user = await authenticateRequest(opts.req.headers);
+      ctx.user = await resolveUserWithExpiryCheck(user);
     } catch {
       // Authentication is optional
     }

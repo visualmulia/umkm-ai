@@ -6,9 +6,12 @@ import {
   CreditCard,
   Smartphone,
   Check,
-  Zap,
   Shield,
   MessageCircle,
+  ExternalLink,
+  Calendar,
+  Coins,
+  Zap,
 } from 'lucide-react'
 
 const PLANS = [
@@ -21,9 +24,9 @@ const PLANS = [
   },
   {
     name: 'Starter',
-    price: 'Rp 79.000',
+    price: 'Rp 49.000',
     period: '/bulan',
-    features: ['300 Chat/bulan', 'CS Bot + Marketing AI', '20 Produk', 'Laporan mingguan', 'Caption IG'],
+    features: ['500 Chat/bulan', 'CS Bot + Marketing AI', '20 Produk', 'Laporan mingguan', 'Caption IG'],
     color: '#d4754a',
     popular: true,
   },
@@ -63,8 +66,32 @@ export default function SettingsPage() {
     },
   });
 
-  const updatePlan = trpc.user.updatePlan.useMutation({
-    onSuccess: () => utils.user.me.invalidate(),
+  const createPayment = trpc.payment.createPayment.useMutation({
+    onSuccess: (data) => {
+      if (data.success && data.paymentUrl) {
+        window.open(data.paymentUrl, '_blank');
+      } else {
+        alert(data.message || 'Gagal membuat pembayaran');
+      }
+      utils.user.me.invalidate();
+    },
+    onError: (err) => {
+      alert(err.message || 'Gagal membuat pembayaran');
+    },
+  });
+
+  const createTopup = trpc.payment.createTopup.useMutation({
+    onSuccess: (data) => {
+      if (data.success && data.paymentUrl) {
+        window.open(data.paymentUrl, '_blank');
+      } else {
+        alert(data.message || 'Gagal membuat top-up');
+      }
+      utils.user.me.invalidate();
+    },
+    onError: (err) => {
+      alert(err.message || 'Gagal membuat top-up');
+    },
   });
 
   const TABS = [
@@ -264,14 +291,31 @@ export default function SettingsPage() {
       {/* Plan Tab */}
       {activeTab === 'plan' && (
         <div>
+          {/* Current plan info */}
+          {user?.planExpiresAt && (
+            <div className="card mb-4 flex items-center gap-3">
+              <Calendar className="w-5 h-5" style={{ color: '#d4754a' }} />
+              <div>
+                <p className="text-sm font-medium" style={{ color: '#1a1a1a' }}>
+                  Plan {user.plan?.toUpperCase()} aktif sampai
+                </p>
+                <p className="text-xs" style={{ color: '#5c5c5c' }}>
+                  {new Date(user.planExpiresAt).toLocaleDateString('id-ID', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </p>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {PLANS.map((plan) => {
               const isCurrent = (user?.plan || 'free').toLowerCase() === plan.name.toLowerCase();
               return (
                 <div
                   key={plan.name}
-                  className={`card relative ${plan.popular ? 'ring-2' : ''}`}
-                  style={plan.popular ? { ringColor: '#d4754a' } : {}}
+                  className={`card relative ${plan.popular ? 'ring-2 ring-[#d4754a]' : ''}`}
                 >
                   {plan.popular && (
                     <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-bold px-3 py-1 rounded-full text-white" style={{ backgroundColor: '#d4754a' }}>
@@ -296,24 +340,76 @@ export default function SettingsPage() {
                   <button
                     onClick={() => {
                       if (!isCurrent && plan.name !== 'Free') {
-                        if (confirm(`Upgrade ke plan ${plan.name}?`)) {
-                          updatePlan.mutate({ plan: plan.name.toLowerCase() as 'starter' | 'pro' });
+                        if (confirm(`Upgrade ke plan ${plan.name}? Kamu akan diarahkan ke halaman pembayaran.`)) {
+                          createPayment.mutate({ plan: plan.name.toLowerCase() as 'starter' | 'pro' });
                         }
                       }
                     }}
-                    className={`w-full mt-4 py-2.5 rounded-full text-sm font-semibold transition-all ${
+                    disabled={isCurrent || createPayment.isPending}
+                    className={`w-full mt-4 py-2.5 rounded-full text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
                       isCurrent ? 'cursor-default' : 'hover:opacity-90'
                     }`}
                     style={{
                       backgroundColor: isCurrent ? '#f0ece3' : plan.color,
                       color: isCurrent ? '#5c5c5c' : 'white',
+                      opacity: createPayment.isPending ? 0.7 : 1,
                     }}
                   >
-                    {isCurrent ? 'Plan Aktif' : `Pilih ${plan.name}`}
+                    {createPayment.isPending && plan.name !== 'Free' ? (
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : isCurrent ? (
+                      'Plan Aktif'
+                    ) : plan.name === 'Free' ? (
+                      'Plan Saat Ini'
+                    ) : (
+                      <>
+                        Bayar Sekarang <ExternalLink className="w-3.5 h-3.5" />
+                      </>
+                    )}
                   </button>
                 </div>
               );
             })}
+          </div>
+
+          {/* Top-up credits */}
+          <div className="card mt-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Coins className="w-5 h-5" style={{ color: '#d4754a' }} />
+              <div>
+                <h3 className="font-semibold text-sm" style={{ color: '#1a1a1a' }}>Top-up Chat Tambahan</h3>
+                <p className="text-xs" style={{ color: '#5c5c5c' }}>Quota habis? Beli chat tambahan tanpa upgrade plan</p>
+              </div>
+            </div>
+            {user?.extraCredits ? (
+              <div className="mb-3 flex items-center gap-2 text-sm" style={{ color: '#1a1a1a' }}>
+                <Zap className="w-4 h-4" style={{ color: '#d4754a' }} />
+                <span>Kamu punya <strong>{user.extraCredits}</strong> chat tambahan</span>
+              </div>
+            ) : null}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { credits: 50, price: 5000 },
+                { credits: 100, price: 10000 },
+                { credits: 250, price: 25000 },
+                { credits: 500, price: 50000 },
+              ].map((pack) => (
+                <button
+                  key={pack.credits}
+                  onClick={() => {
+                    if (confirm(`Beli ${pack.credits} chat tambahan seharga Rp ${pack.price.toLocaleString('id-ID')}?`)) {
+                      createTopup.mutate({ credits: pack.credits });
+                    }
+                  }}
+                  disabled={createTopup.isPending}
+                  className="p-3 rounded-xl border text-center hover:border-[#d4754a] transition-colors"
+                  style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: 'white', opacity: createTopup.isPending ? 0.7 : 1 }}
+                >
+                  <p className="text-sm font-bold" style={{ color: '#1a1a1a' }}>{pack.credits} Chat</p>
+                  <p className="text-xs mt-0.5" style={{ color: '#d4754a' }}>Rp {pack.price.toLocaleString('id-ID')}</p>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}

@@ -61,6 +61,26 @@ export const orderRouter = createRouter({
       return { success: true };
     }),
 
+  generateInvoice: authedQuery
+    .input(z.object({ orderId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = getDb();
+      const order = await db.query.orders.findFirst({
+        where: and(eq(orders.id, input.orderId), eq(orders.userId, ctx.user.id)),
+      });
+      if (!order) return { success: false, message: "Order tidak ditemukan" };
+
+      const now = new Date();
+      const invoiceNumber = `INV-UMKM-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${String(order.id).padStart(4, "0")}`;
+
+      await db
+        .update(orders)
+        .set({ invoiceNumber })
+        .where(eq(orders.id, order.id));
+
+      return { success: true, invoiceNumber };
+    }),
+
   stats: authedQuery.query(async ({ ctx }) => {
     const db = getDb();
     const allOrders = await db.query.orders.findMany({
