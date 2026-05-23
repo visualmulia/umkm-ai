@@ -1,13 +1,14 @@
 import { z } from "zod";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { createRouter, authedQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { messages, chats } from "@db/schema";
+import { callAI } from "./lib/ai-provider";
 
 export const messageRouter = createRouter({
   listByChat: authedQuery
     .input(z.object({ chatId: z.number() }))
-    .query(async ({ ctx, input }) => {
+    .query(async ({ ctx, input }: any) => {
       const db = getDb();
       return db.query.messages.findMany({
         where: eq(messages.chatId, input.chatId),
@@ -24,7 +25,7 @@ export const messageRouter = createRouter({
         aiConfidence: z.string().optional(),
       })
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input }: any) => {
       const db = getDb();
       const { chatId, sender, content, aiConfidence } = input;
 
@@ -66,7 +67,7 @@ export const messageRouter = createRouter({
         tone: z.string().default("ramah"),
       })
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input }: any) => {
       const db = getDb();
 
       // Build AI prompt
@@ -78,40 +79,17 @@ ${input.products ? `\nDaftar produk:\n${input.products}` : ""}`;
 
       const userPrompt = input.customerMessage;
 
-      // Call Kimi AI
+      // Call AI (Groq atau Kimi — fleksibel)
       try {
-        const apiKey = process.env.KIMI_API_KEY;
-        if (!apiKey) {
-          return { response: "Maaf, sistem AI sedang maintenance. Hubungi owner langsung ya!", confidence: 0 };
-        }
-
-        const res = await fetch("https://api.moonshot.cn/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model: "kimi-k2.5-lite-preview",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            temperature: 0.7,
-            max_tokens: 500,
-          }),
-        });
-
-        if (!res.ok) throw new Error(`AI API error: ${res.status}`);
-        const data = await res.json();
-        const aiResponse = data.choices?.[0]?.message?.content || "Maaf, saya tidak mengerti. Bisa diulangi?";
+        const aiResult = await callAI(systemPrompt, userPrompt);
+        const aiResponse = aiResult.content;
 
         // Save AI message
         await db.insert(messages).values({
           chatId: input.chatId,
           sender: "ai",
           content: aiResponse,
-          aiConfidence: "0.85",
+          aiConfidence: aiResult.confidence.toString(),
         });
 
         // Update chat
@@ -120,7 +98,7 @@ ${input.products ? `\nDaftar produk:\n${input.products}` : ""}`;
           .set({ lastMessage: aiResponse, status: "ai_handled" })
           .where(eq(chats.id, input.chatId));
 
-        return { response: aiResponse, confidence: 0.85 };
+        return { response: aiResponse, confidence: aiResult.confidence };
       } catch (err) {
         console.error("AI Error:", err);
         const fallback = "Maaf, saya sedang tidak bisa menjawab. Owner akan segera membantu!";
