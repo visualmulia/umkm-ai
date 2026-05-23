@@ -134,7 +134,7 @@ export default function SettingsPage() {
                   type="text"
                   value={form.whatsapp}
                   onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-                  placeholder="628123456789"
+                  placeholder="6285643419774"
                   className="w-full pl-9 pr-3 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2"
                   style={{ borderColor: 'rgba(0,0,0,0.08)', backgroundColor: '#faf8f4' }}
                 />

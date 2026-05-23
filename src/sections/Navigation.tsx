@@ -98,7 +98,7 @@ export default function Navigation() {
 
           {/* Desktop CTA */}
           <a
-            href="https://wa.me/628129998888"
+            href="https://wa.me/6285643419774"
             target="_blank"
             rel="noopener noreferrer"
             className="btn-primary hidden md:inline-flex"
@@ -165,7 +165,7 @@ export default function Navigation() {
             </a>
           ))}
           <a
-            href="https://wa.me/628129998888"
+            href="https://wa.me/6285643419774"
             target="_blank"
             rel="noopener noreferrer"
             className="btn-primary btn-primary-lg"

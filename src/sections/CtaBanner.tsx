@@ -101,7 +101,7 @@ export default function CtaBanner() {
         </p>
         <div className="cta-button" style={{ marginBottom: 16 }}>
           <a
-            href="https://wa.me/628129998888"
+            href="https://wa.me/6285643419774"
             target="_blank"
             rel="noopener noreferrer"
             className="btn-primary"

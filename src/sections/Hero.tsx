@@ -118,7 +118,7 @@ export default function Hero() {
 
             <div className="hero-cta mb-7">
               <a
-                href="https://wa.me/628129998888"
+                href="https://wa.me/6285643419774"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-primary btn-primary-lg"

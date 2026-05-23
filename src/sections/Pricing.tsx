@@ -208,7 +208,7 @@ export default function Pricing() {
 
               {/* CTA */}
               <a
-                href="https://wa.me/628129998888"
+                href="https://wa.me/6285643419774"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={plan.ctaStyle === 'primary' ? 'btn-primary' : 'btn-outline'}
