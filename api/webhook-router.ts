@@ -90,12 +90,44 @@ export const webhookRouter = createRouter({
         }
 
         // Find device by Kirimi device ID
-        const device = await db.query.devices.findFirst({
+        let device = await db.query.devices.findFirst({
           where: eq(devices.kirimiDeviceId, kirimiDeviceId),
         });
 
+        // ─── AUTO-ONBOARD: Create user & device if not found ───
         if (!device) {
-          return { received: true, ignored: true, reason: "device_not_found" };
+          const envDeviceId = process.env.KIRIMI_DEVICE_ID;
+          if (kirimiDeviceId === envDeviceId) {
+            // Create auto-onboard user
+            const [newUser] = await db
+              .insert(users)
+              .values({
+                unionId: `auto_${Date.now()}`,
+                name: "UMKM Owner",
+                whatsapp: customerPhone,
+                businessName: "Bisnis Saya",
+                plan: "free",
+                onboardingStep: 0,
+                role: "user",
+              })
+              .returning();
+
+            // Create device linked to user
+            const [newDevice] = await db
+              .insert(devices)
+              .values({
+                userId: newUser.id,
+                kirimiDeviceId: kirimiDeviceId,
+                name: "Mbak AI",
+                tone: "ramah",
+              })
+              .returning();
+
+            device = newDevice;
+            console.log(`[AUTO-ONBOARD] Created user ${newUser.id} and device ${newDevice.id} for ${customerPhone}`);
+          } else {
+            return { received: true, ignored: true, reason: "device_not_found" };
+          }
         }
 
         // Find or create chat
@@ -337,11 +369,11 @@ Akhiri dengan semangat dan emoji!`;
                   bookingResponse = `✅ *Booking Inquiry Tersimpan!*\n\nJasa: ${svc.name}\nTanggal: ${formatDateId(parsed.date)}\nJam: ${parsed.startTime} - ${parsed.endTime}\nHarga: Rp ${Number(svc.price).toLocaleString("id-ID")}\n\nUntuk lock jadwal, bayar DP ${svc.depositPercent}% (Rp ${depositAmount.toLocaleString("id-ID")}) via QRIS.\n\nKirim "YA" untuk lanjut pembayaran, atau "BATAL" kalau berubah pikiran.`;
 
                   // Notify provider via WhatsApp
-                  const providerDevice = await db.query.devices.findFirst({
-                    where: eq(devices.userId, device.userId),
+                  const providerUser = await db.query.users.findFirst({
+                    where: eq(users.id, device.userId),
                   });
-                  if (providerDevice) {
-                    await sendViaKirimi(providerDevice.kirimiDeviceId, providerDevice.kirimiDeviceId, `🔔 Booking Baru!\n\nJasa: ${svc.name}\nTanggal: ${formatDateId(parsed.date)}\nJam: ${parsed.startTime} - ${parsed.endTime}\nCustomer: ${customerPhone}\n\nStatus: Inquiry (menunggu DP)`);
+                  if (providerUser?.whatsapp) {
+                    await sendViaKirimi(kirimiDeviceId, providerUser.whatsapp, `🔔 Booking Baru!\n\nJasa: ${svc.name}\nTanggal: ${formatDateId(parsed.date)}\nJam: ${parsed.startTime} - ${parsed.endTime}\nCustomer: ${customerPhone}\n\nStatus: Inquiry (menunggu DP)`);
                   }
 
                   break; // Use first matching service
