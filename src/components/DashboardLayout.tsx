@@ -9,6 +9,8 @@ import {
   Brain,
   Megaphone,
   ClipboardList,
+  Wrench,
+  CalendarCheck,
   Settings,
   LogOut,
   ChevronLeft,
@@ -25,6 +27,8 @@ const NAV_ITEMS = [
   { icon: Brain, label: 'AI Training', path: '/dashboard/ai-training' },
   { icon: Megaphone, label: 'Marketing', path: '/dashboard/marketing' },
   { icon: ClipboardList, label: 'Admin', path: '/dashboard/admin' },
+  { icon: Wrench, label: 'Jasa', path: '/dashboard/services' },
+  { icon: CalendarCheck, label: 'Booking', path: '/dashboard/bookings' },
   { icon: Settings, label: 'Pengaturan', path: '/dashboard/settings' },
 ]
 

@@ -2,7 +2,8 @@ import { z } from "zod";
 import { eq, gte, and, sql } from "drizzle-orm";
 import { createRouter, publicQuery } from "./middleware";
 import { getDb } from "./queries/connection";
-import { chats, messages, devices, usageLogs, users } from "@db/schema";
+import { chats, messages, devices, usageLogs, users, bookings, services, serviceSchedules } from "@db/schema";
+import { parseBookingIntent, formatDateId, addMinutesToTime } from "./lib/date-parser";
 
 // Quota config per plan
 const PLAN_QUOTAS: Record<string, number> = {
@@ -61,6 +62,9 @@ Kalau kamu suka saya bantu, upgrade yuk biar saya terus jaga toko 24/7:
 • Follow-up otomatis
 
 Mau upgrade yang mana kak?`;
+
+// Booking intent keywords
+const BOOKING_KEYWORDS = /booking|pesan|reservasi|janji|jadwal|appointment|book/i;
 
 export const webhookRouter = createRouter({
   // Kirimi.id incoming webhook
@@ -228,6 +232,141 @@ Tanyakan 3 hal ini satu per satu dengan santai:
 Setelah itu, minta customer kirim minimal 3 produk (foto + nama + harga) supaya AI bisa belajar.
 Beritahu juga bahwa mereka dapat 50 chat GRATIS untuk coba dulu.
 Akhiri dengan semangat dan emoji!`;
+          }
+
+          // ─── BOOKING INTENT DETECTION ───
+          const bookingIntent = BOOKING_KEYWORDS.test(content);
+          let bookingResponse = "";
+
+          if (bookingIntent) {
+            // Get active services for this user
+            const userServices = await db.query.services.findMany({
+              where: and(eq(services.userId, device.userId), eq(services.isActive, true)),
+            });
+
+            if (userServices.length > 0) {
+              // Try to parse date/time from message using first service's duration
+              const defaultDuration = userServices[0].durationMinutes;
+              const parsed = parseBookingIntent(content, defaultDuration);
+
+              if (parsed) {
+                // Check availability for each service
+                for (const svc of userServices) {
+                  const dayOfWeek = new Date(parsed.date + "T00:00:00").getDay();
+                  const schedule = await db.query.serviceSchedules.findFirst({
+                    where: and(
+                      eq(serviceSchedules.serviceId, svc.id),
+                      eq(serviceSchedules.dayOfWeek, dayOfWeek),
+                      eq(serviceSchedules.isActive, true)
+                    ),
+                  });
+
+                  if (!schedule) continue;
+
+                  // Check if requested time is within schedule
+                  if (parsed.startTime < schedule.startTime || parsed.endTime > schedule.endTime) {
+                    bookingResponse = `Maaf kak, untuk jasa *${svc.name}* jam operasionalnya hanya ${schedule.startTime} - ${schedule.endTime}. Mau di jam lain?`;
+                    break;
+                  }
+
+                  // Check existing bookings
+                  const existing = await db.query.bookings.findMany({
+                    where: and(
+                      eq(bookings.serviceId, svc.id),
+                      eq(bookings.bookingDate, parsed.date),
+                      eq(bookings.userId, device.userId),
+                    ),
+                  });
+                  const active = existing.filter((b) => !["cancelled", "no_show"].includes(b.status));
+
+                  if (active.length >= svc.maxBookingsPerDay) {
+                    // Suggest next available dates
+                    const suggestions: string[] = [];
+                    for (let i = 1; i <= 7 && suggestions.length < 3; i++) {
+                      const nextDate = new Date(parsed.date + "T00:00:00");
+                      nextDate.setDate(nextDate.getDate() + i);
+                      const nextStr = nextDate.toISOString().split("T")[0];
+                      const nextDay = nextDate.getDay();
+                      const nextSchedule = await db.query.serviceSchedules.findFirst({
+                        where: and(
+                          eq(serviceSchedules.serviceId, svc.id),
+                          eq(serviceSchedules.dayOfWeek, nextDay),
+                          eq(serviceSchedules.isActive, true)
+                        ),
+                      });
+                      if (!nextSchedule) continue;
+                      const nextExisting = await db.query.bookings.findMany({
+                        where: and(
+                          eq(bookings.serviceId, svc.id),
+                          eq(bookings.bookingDate, nextStr),
+                          eq(bookings.userId, device.userId),
+                        ),
+                      });
+                      const nextActive = nextExisting.filter((b) => !["cancelled", "no_show"].includes(b.status));
+                      if (nextActive.length < svc.maxBookingsPerDay) {
+                        suggestions.push(`${formatDateId(nextStr)}, jam ${nextSchedule.startTime} - ${addMinutesToTime(nextSchedule.startTime, svc.durationMinutes)}`);
+                      }
+                    }
+
+                    if (suggestions.length > 0) {
+                      bookingResponse = `Maaf kak, ${svc.name} di ${formatDateId(parsed.date)} sudah penuh. Alternatif terdekat:\n${suggestions.map((s, i) => `${i + 1}. ${s}`).join("\n")}\n\nMau yang mana kak?`;
+                    } else {
+                      bookingResponse = `Maaf kak, ${svc.name} di minggu ini sudah penuh. Coba cek jadwal minggu depan ya!`;
+                    }
+                    break;
+                  }
+
+                  // Available! Create booking inquiry
+                  const [newBooking] = await db
+                    .insert(bookings)
+                    .values({
+                      userId: device.userId,
+                      serviceId: svc.id,
+                      customerPhone,
+                      customerName: customerName || "Customer",
+                      bookingDate: parsed.date,
+                      startTime: parsed.startTime,
+                      endTime: parsed.endTime,
+                      status: "inquiry",
+                      totalAmount: svc.price,
+                      notes: content.substring(0, 200),
+                    })
+                    .returning();
+
+                  const depositAmount = Math.round(Number(svc.price) * (svc.depositPercent / 100));
+                  bookingResponse = `✅ *Booking Inquiry Tersimpan!*\n\nJasa: ${svc.name}\nTanggal: ${formatDateId(parsed.date)}\nJam: ${parsed.startTime} - ${parsed.endTime}\nHarga: Rp ${Number(svc.price).toLocaleString("id-ID")}\n\nUntuk lock jadwal, bayar DP ${svc.depositPercent}% (Rp ${depositAmount.toLocaleString("id-ID")}) via QRIS.\n\nKirim "YA" untuk lanjut pembayaran, atau "BATAL" kalau berubah pikiran.`;
+
+                  // Notify provider via WhatsApp
+                  const providerDevice = await db.query.devices.findFirst({
+                    where: eq(devices.userId, device.userId),
+                  });
+                  if (providerDevice) {
+                    await sendViaKirimi(providerDevice.kirimiDeviceId, providerDevice.kirimiDeviceId, `🔔 Booking Baru!\n\nJasa: ${svc.name}\nTanggal: ${formatDateId(parsed.date)}\nJam: ${parsed.startTime} - ${parsed.endTime}\nCustomer: ${customerPhone}\n\nStatus: Inquiry (menunggu DP)`);
+                  }
+
+                  break; // Use first matching service
+                }
+              } else {
+                // Could not parse date/time
+                bookingResponse = `Halo kak! Saya bisa bantu booking jasa. Formatnya gini ya:\n\n"Booking driver hari Sabtu 28 Juni jam 9 pagi"\n\nMau booking kapan kak?`;
+              }
+            }
+          }
+
+          // If booking response generated, send it directly
+          if (bookingResponse) {
+            await db.insert(messages).values({
+              chatId: chat.id,
+              sender: "ai",
+              content: bookingResponse,
+              aiConfidence: "0.95",
+            });
+            await db
+              .update(chats)
+              .set({ lastMessage: bookingResponse, status: "ai_handled" })
+              .where(eq(chats.id, chat.id));
+            await sendViaKirimi(kirimiDeviceId, customerPhone, bookingResponse);
+            return { received: true, aiHandled: true, booking: true };
           }
 
           // Call Kimi AI

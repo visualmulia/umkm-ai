@@ -23,6 +23,8 @@ import ProductsPage from './pages/dashboard/ProductsPage'
 import KnowledgePage from './pages/dashboard/KnowledgePage'
 import MarketingPage from './pages/dashboard/MarketingPage'
 import AdminPage from './pages/dashboard/AdminPage'
+import ServicesPage from './pages/dashboard/ServicesPage'
+import BookingsPage from './pages/dashboard/BookingsPage'
 import SettingsPage from './pages/dashboard/SettingsPage'
 
 function LandingPage() {
@@ -55,6 +57,8 @@ export default function App() {
         <Route path="ai-training" element={<KnowledgePage />} />
         <Route path="marketing" element={<MarketingPage />} />
         <Route path="admin" element={<AdminPage />} />
+        <Route path="services" element={<ServicesPage />} />
+        <Route path="bookings" element={<BookingsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<NotFound />} />

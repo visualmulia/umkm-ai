@@ -153,3 +153,54 @@ export const sessions = sqliteTable("sessions", {
 });
 
 export type Session = typeof sessions.$inferSelect;
+
+// ─── Services (for booking system) ───
+export const services = sqliteTable("services", {
+  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+  userId: integer("userId", { mode: "number" }).notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  durationMinutes: integer("durationMinutes", { mode: "number" }).default(60).notNull(),
+  price: text("price").notNull(), // decimal as string
+  bufferMinutes: integer("bufferMinutes", { mode: "number" }).default(0),
+  maxBookingsPerDay: integer("maxBookingsPerDay", { mode: "number" }).default(1),
+  depositPercent: integer("depositPercent", { mode: "number" }).default(50),
+  isActive: integer("isActive", { mode: "boolean" }).default(true).notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+});
+
+export type Service = typeof services.$inferSelect;
+
+// ─── Service Schedules (weekly template) ───
+export const serviceSchedules = sqliteTable("service_schedules", {
+  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+  serviceId: integer("serviceId", { mode: "number" }).notNull(),
+  dayOfWeek: integer("dayOfWeek", { mode: "number" }).notNull(), // 0=Sun, 1=Mon, ..., 6=Sat
+  startTime: text("startTime").notNull(), // "HH:mm" format
+  endTime: text("endTime").notNull(),     // "HH:mm" format
+  isActive: integer("isActive", { mode: "boolean" }).default(true).notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+});
+
+export type ServiceSchedule = typeof serviceSchedules.$inferSelect;
+
+// ─── Bookings ───
+export const bookings = sqliteTable("bookings", {
+  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+  userId: integer("userId", { mode: "number" }).notNull(),
+  serviceId: integer("serviceId", { mode: "number" }).notNull(),
+  customerPhone: text("customerPhone").notNull(),
+  customerName: text("customerName").default("Customer").notNull(),
+  bookingDate: text("bookingDate").notNull(), // "YYYY-MM-dd" format
+  startTime: text("startTime").notNull(),     // "HH:mm" format
+  endTime: text("endTime").notNull(),         // "HH:mm" format
+  status: text("booking_status", { enum: ["inquiry", "pending_deposit", "confirmed", "completed", "cancelled", "no_show"] }).default("inquiry").notNull(),
+  depositAmount: text("depositAmount"),       // decimal as string
+  totalAmount: text("totalAmount").notNull(), // decimal as string
+  notes: text("notes"),
+  createdAt: integer("createdAt", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+});
+
+export type Booking = typeof bookings.$inferSelect;

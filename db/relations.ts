@@ -10,6 +10,9 @@ import {
   payments,
   usageLogs,
   sessions,
+  services,
+  serviceSchedules,
+  bookings,
 } from "./schema";
 
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -20,6 +23,8 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   orders: many(orders),
   payments: many(payments),
   usageLogs: many(usageLogs),
+  services: many(services),
+  bookings: many(bookings),
   currentDevice: one(devices, {
     fields: [users.currentDeviceId],
     references: [devices.id],
@@ -96,5 +101,32 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
   user: one(users, {
     fields: [sessions.userId],
     references: [users.id],
+  }),
+}));
+
+export const servicesRelations = relations(services, ({ one, many }) => ({
+  user: one(users, {
+    fields: [services.userId],
+    references: [users.id],
+  }),
+  schedules: many(serviceSchedules),
+  bookings: many(bookings),
+}));
+
+export const serviceSchedulesRelations = relations(serviceSchedules, ({ one }) => ({
+  service: one(services, {
+    fields: [serviceSchedules.serviceId],
+    references: [services.id],
+  }),
+}));
+
+export const bookingsRelations = relations(bookings, ({ one }) => ({
+  user: one(users, {
+    fields: [bookings.userId],
+    references: [users.id],
+  }),
+  service: one(services, {
+    fields: [bookings.serviceId],
+    references: [services.id],
   }),
 }));
