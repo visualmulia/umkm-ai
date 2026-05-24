@@ -10,11 +10,26 @@ import { Paths } from "@contracts/constants";
 import { getDb } from "./queries/connection";
 import { payments, users } from "@db/schema";
 import { eq } from "drizzle-orm";
+import { handleKirimiWebhook } from "./webhook-kirimi";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
 
 app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 app.get(Paths.oauthCallback, createOAuthCallbackHandler());
+
+// Kirimi.id webhook handler — public endpoint for WhatsApp messages
+app.post("/api/webhook/kirimi", async (c) => {
+  try {
+    const payload = await c.req.json();
+    console.log("[Kirimi Webhook] Received event:", payload.event || payload.type, "from", payload.from);
+    const result = await handleKirimiWebhook(payload);
+    console.log("[Kirimi Webhook] Result:", JSON.stringify(result));
+    return c.json(result);
+  } catch (err) {
+    console.error("[Kirimi Webhook] Error:", err);
+    return c.json({ error: "Internal server error", received: true }, 500);
+  }
+});
 
 // Flip webhook handler — public endpoint for payment notifications
 app.post("/api/webhook/flip", async (c) => {
