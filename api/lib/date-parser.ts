@@ -70,7 +70,7 @@ function parseTime(text: string): { startTime: string; endTime: string | null } 
   const lower = text.toLowerCase();
 
   // Pattern: "dari jam 9 sampai jam 5 sore" or "jam 09.00 - 17.00"
-  const rangeMatch = lower.match(/(?:dari\s+)?jam\s*(\d{1,2})[:\.]?(\d{2})?\s*(?:sampai|sd|s/d|[-–])\s*jam\s*(\d{1,2})[:\.]?(\d{2})?/);
+  const rangeMatch = lower.match(/(?:dari\s+)?jam\s*(\d{1,2})[:\.]?(\d{2})?\s*(?:sampai|sd|s\/d|\-)\s*jam\s*(\d{1,2})[:\.]?(\d{2})?/);
   if (rangeMatch) {
     let startH = parseInt(rangeMatch[1]);
     const startM = rangeMatch[2] ? parseInt(rangeMatch[2]) : 0;

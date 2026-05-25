@@ -1,5 +1,8 @@
 {
   "buildCommand": "npx vite build && rm -rf public && cp -r dist public",
   "outputDirectory": "public",
-  "framework": null
+  "framework": null,
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index" }
+  ]
 }
